@@ -18,6 +18,9 @@
 'if the #DEFINEs for LED pins are commented out, they will not be used
 '#DEFINE PIN_LED_ALARM B.3
 '#DEFINE PIN_LED_ON B.6
+;  typically %10100000-%10101110, corresponding to device select bits on eeprom
+#DEFINE I2CADDRESS %10100000
+
 #DEFINE PIN_I2C_SDA B.5
 #DEFINE PIN_I2C_SCL B.7
 
@@ -37,13 +40,9 @@ symbol tmpwd4 = w7
 symbol tmpwd4l = b14
 symbol tmpwd4h = b15
 
-;for use with word addressing the tmpvar logic is unneeded and addr should be 0 unless addressing larger chips
-#MACRO EEPROM_SETUP(ADDR, TMPVAR)
-	; ADDR is a word
-	; TMPVAR is a byte
-	; I2C address
-	TMPVAR = ADDR / 128 & %00001110
-        TMPVAR = TMPVAR | %10100000
+
+#MACRO EEPROM_SETUP(TMPVAR)
+	; TMPVAR is a byte specifying I2C address
     ; sertxd(" (", #ADDR, ", ", #TMPVAR, ")")
         hi2csetup i2cmaster, TMPVAR, i2cslow_32, i2cword ; Reduce clock speeds when running at 3.3v
 #ENDMACRO
@@ -76,10 +75,10 @@ computer_mode_loop:
             #IFDEF PIN_LED_ON
             high PIN_LED_ON
             #ENDIF
-            EEPROM_SETUP(0, tmpwd3l)
+            EEPROM_SETUP(I2CADDRESS)
             for tmpwd0 = tmpwd1 to tmpwd2
                 ;EEPROM_SETUP(tmpwd0, tmpwd3l)
-                hi2cin tmpwd0l, (tmpwd3l)
+                hi2cin tmpwd0, (tmpwd3l)
                 sertxd(tmpwd3l)
             next tmpwd0
             #IFDEF PIN_LED_ON
@@ -97,12 +96,12 @@ computer_mode_loop:
             #IFDEF PIN_LED_ON
             high PIN_LED_ON
             #ENDIF
-            EEPROM_SETUP(0, tmpwd3l)
+            EEPROM_SETUP(I2CADDRESS)
             for tmpwd0 = tmpwd1 to tmpwd2
                 sertxd(1) ; Acknowledge
                 ;EEPROM_SETUP(tmpwd0, tmpwd3l)
                 serrxd tmpwd3l
-                hi2cout tmpwd0l, (tmpwd3l)
+                hi2cout tmpwd0, (tmpwd3l)
 		    #IFDEF PIN_LED_ON
                 toggle PIN_LED_ON
 		    #ENDIF
