@@ -4,17 +4,19 @@
 ; binary files. This allows disk images of sorts to be taken, edited using a hex
 ; editor of your choice and uploaded.
 ;
-; Designed for a XL24C16P 16kbit eeprom chip connected vie hardware I2C.
+; Designed for a 24LC256 256kbit eeprom chip connected vie hardware I2C.
 ;
 ; Jotham Gates
 ; Created 03/04/2021
-; Modified 03/04/2021
+; Patrick Leiser
+; Modified 03/22/2024
 
-#PICAXE 20M2 ; Just so the command line compiler behaves. This an be changed
+#PICAXE 20M2 ; Just so the command line compiler behaves. This can be changed
 #NO_DATA
 
-; For an 18M2
-#DEFINE PIN_LED_ALARM B.3
+; For a 20M2
+'if the #DEFINEs for LED pins are commented out, they will not be used
+'#DEFINE PIN_LED_ALARM B.3
 '#DEFINE PIN_LED_ON B.6
 #DEFINE PIN_I2C_SDA B.5
 #DEFINE PIN_I2C_SCL B.7
@@ -35,15 +37,15 @@ symbol tmpwd4 = w7
 symbol tmpwd4l = b14
 symbol tmpwd4h = b15
 
-; The EEPROM chip I am using uses its address to select banks, so this has to be set as well.
+;for use with word addressing the tmpvar logic is unneeded and addr should be 0 unless addressing larger chips
 #MACRO EEPROM_SETUP(ADDR, TMPVAR)
 	; ADDR is a word
 	; TMPVAR is a byte
 	; I2C address
 	TMPVAR = ADDR / 128 & %00001110
-	TMPVAR = TMPVAR | %10100000
+        TMPVAR = TMPVAR | %10100000
     ; sertxd(" (", #ADDR, ", ", #TMPVAR, ")")
-	hi2csetup i2cmaster, TMPVAR, i2cslow_32, i2cbyte ; Reduce clock speeds when running at 3.3v
+        hi2csetup i2cmaster, TMPVAR, i2cslow_32, i2cword ; Reduce clock speeds when running at 3.3v
 #ENDMACRO
 
 init:
@@ -55,7 +57,9 @@ computer_mode:
     #IFDEF PIN_LED_ON
     low PIN_LED_ON ; LEDS to flash (from another project)
     #ENDIF
+    #IFDEF PIN_LED_ALARM
     high PIN_LED_ALARM
+    #ENDIF
 
 computer_mode_loop:
     serrxd tmpwd0l
@@ -64,37 +68,41 @@ computer_mode_loop:
             low PIN_LED_ALARM
             serrxd tmpwd1l, tmpwd1h, tmpwd2l, tmpwd2h ; Start and end address (inclusive) in little endian
             ; Upload everything
+            #IFDEF PIN_LED_ALARM
             high PIN_LED_ALARM
-		#IFDEF PIN_LED_ON
+            #ENDIF
+            #IFDEF PIN_LED_ON
             high PIN_LED_ON
-		#ENDIF
+            #ENDIF
+            EEPROM_SETUP(0, tmpwd3l)
             for tmpwd0 = tmpwd1 to tmpwd2
-                EEPROM_SETUP(tmpwd0, tmpwd3l)
+                ;EEPROM_SETUP(tmpwd0, tmpwd3l)
                 hi2cin tmpwd0l, (tmpwd3l)
                 sertxd(tmpwd3l)
-		next tmpwd0
-		#IFDEF PIN_LED_ON
+            next tmpwd0
+            #IFDEF PIN_LED_ON
             low PIN_LED_ON
-		#ENDIF
+            #ENDIF
         case "w" ; Write bytes
             low PIN_LED_ALARM
             serrxd tmpwd1l, tmpwd1h, tmpwd2l, tmpwd2h ; Start and end address (inclusive) in little endian
             ; Read everything
             high PIN_LED_ALARM
-		#IFDEF PIN_LED_ON
+            #IFDEF PIN_LED_ON
             high PIN_LED_ON
-		#ENDIF
+            #ENDIF
+            EEPROM_SETUP(0, tmpwd3l)
             for tmpwd0 = tmpwd1 to tmpwd2
                 sertxd(1) ; Acknowledge
-                EEPROM_SETUP(tmpwd0, tmpwd3l)
+                ;EEPROM_SETUP(tmpwd0, tmpwd3l)
                 serrxd tmpwd3l
                 hi2cout tmpwd0l, (tmpwd3l)
                 toggle PIN_LED_ON
                 pause 80
-		next tmpwd0
-	      #IFDEF PIN_LED_ON
+            next tmpwd0
+            #IFDEF PIN_LED_ON
             low PIN_LED_ON
-		#ENDIF
+            #ENDIF
             ; Done
         case "q" ; Reset
             reset
