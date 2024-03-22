@@ -65,7 +65,9 @@ computer_mode_loop:
     serrxd tmpwd0l
     select case tmpwd0l
         case "r" ; Read bytes
+	      #IFDEF PIN_LED_ALARM
             low PIN_LED_ALARM
+		#ENDIF
             serrxd tmpwd1l, tmpwd1h, tmpwd2l, tmpwd2h ; Start and end address (inclusive) in little endian
             ; Upload everything
             #IFDEF PIN_LED_ALARM
@@ -84,10 +86,14 @@ computer_mode_loop:
             low PIN_LED_ON
             #ENDIF
         case "w" ; Write bytes
+	      #IFDEF PIN_LED_ALARM
             low PIN_LED_ALARM
+		#ENDIF
             serrxd tmpwd1l, tmpwd1h, tmpwd2l, tmpwd2h ; Start and end address (inclusive) in little endian
             ; Read everything
+		#IFDEF PIN_LED_ALARM
             high PIN_LED_ALARM
+		#ENDIF PIN_LED_ALARM
             #IFDEF PIN_LED_ON
             high PIN_LED_ON
             #ENDIF
@@ -97,7 +103,9 @@ computer_mode_loop:
                 ;EEPROM_SETUP(tmpwd0, tmpwd3l)
                 serrxd tmpwd3l
                 hi2cout tmpwd0l, (tmpwd3l)
+		    #IFDEF PIN_LED_ON
                 toggle PIN_LED_ON
+		    #ENDIF
                 pause 80
             next tmpwd0
             #IFDEF PIN_LED_ON
